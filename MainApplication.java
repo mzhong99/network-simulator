@@ -13,6 +13,7 @@ import javafx.scene.control.Alert.AlertType;
 import javafx.scene.layout.*;
 
 import java.util.Scanner;
+import java.util.Arrays;
 
 import java.io.File;
 import java.io.IOException;
@@ -247,9 +248,27 @@ public class MainApplication extends Application {
         promptStage.show();
     }
 
-    public void startNewSimulation(int width, int height, String simulationName) {
+    public void loadCachedSimulation(
+        int width, 
+        int height, 
+        String simulationName, 
+        String[][] attributes) {
+
         System.out.println("Starting simulation " + simulationName + " with dimensions");
         System.out.println("    Width:  " + width);
         System.out.println("    Height: " + height);
+
+        Simulator simulator = new Simulator(width, height, simulationName, attributes);
+        simulator.show();
+    }
+
+    public void startNewSimulation(int width, int height, String simulationName) {
+
+        String[][] attributes = new String[height][width];
+        for (String[] row : attributes) {
+            Arrays.fill(row, "wall");
+        }
+        
+        loadCachedSimulation(width, height, simulationName, attributes);
     }
 }

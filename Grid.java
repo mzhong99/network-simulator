@@ -60,8 +60,8 @@ public class Grid {
         }
         
         String oldAttribute = this.getAttributeAt(row, col);
-        boolean isTurnedOn  =  ("".equals(oldAttribute)) && !("".equals(attribute));
-        boolean isTurnedOff = !("".equals(oldAttribute)) &&  ("".equals(attribute));
+        boolean isTurnedOn  =  ("wall".equals(oldAttribute)) && !("wall".equals(attribute));
+        boolean isTurnedOff = !("wall".equals(oldAttribute)) &&  ("wall".equals(attribute));
 
         grid.get(row).get(col).setAttribute(attribute);
         

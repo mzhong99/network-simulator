@@ -19,11 +19,11 @@ public class Tile {
         if (tile == null) {
             return false;
         }
-        return !("".equals(tile.attribute));
+        return !("wall".equals(tile.attribute));
     }
 
     public Tile(int row, int col, Grid grid) {
-        this(row, col, grid, "");
+        this(row, col, grid, "wall");
     }
 
     public Tile(int row, int col, Grid grid, String attribute) {
@@ -59,7 +59,7 @@ public class Tile {
     
     public List<Tile> getNeighbors() {
         
-        if ("".equals(attribute)) {
+        if ("wall".equals(attribute)) {
             return new ArrayList<Tile>();
         }
 
