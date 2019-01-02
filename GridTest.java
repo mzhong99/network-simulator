@@ -52,7 +52,7 @@ public class GridTest {
 
         for (int r = 0; r < grid.getHeight(); r++) {
             for (int c = 0; c < grid.getWidth(); c++) {
-                assertEquals("", grid.getAttributeAt(r, c));
+                assertEquals("wall", grid.getAttributeAt(r, c));
             }
         }
         
@@ -112,7 +112,7 @@ public class GridTest {
 
         for (int r = 1; r < grid.getHeight() - 1; r++) {
             for (int c = 1; c < grid.getWidth() - 1; c++) {
-                grid.setAttributeAt(r, c, "");
+                grid.setAttributeAt(r, c, "wall");
             }
         }
 
