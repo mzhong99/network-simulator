@@ -88,6 +88,12 @@ public class MainApplication extends Application {
         while (fileNeeded && !hasCanceled) {
 
             FileChooser fileChooser = new FileChooser();
+            
+            fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("All Files", "*.*"),
+                new FileChooser.ExtensionFilter("Network Data Files", "*.ntwk")
+            );
+
             File fileToOpen = fileChooser.showOpenDialog(loadingStage);
             
             hasCanceled = fileToOpen == null;
@@ -161,7 +167,7 @@ public class MainApplication extends Application {
         }
         
         if (hasCanceled) return;
-        startNewSimulation(width, height, simulationName);
+        loadCachedSimulation(width, height, simulationName, attributes);
     }
 
     public void promptForNew() {

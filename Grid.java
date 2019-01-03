@@ -6,6 +6,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.HashMap;
 
+import java.util.Stack;
+
 import java.lang.IllegalArgumentException;
 
 import javafx.scene.shape.Rectangle;
@@ -126,5 +128,33 @@ public class Grid {
         }
         
         return adjacency;
+    }
+
+    public boolean isContiguous() {
+        
+        Set<Tile> tilesToExplore = getValidTiles();
+        Map<Tile, List<Tile>> adjacency = getAdjacencyMap();
+
+        if (validTiles.size() == 0) {
+            return false;
+        }
+
+        Tile start = tilesToExplore.iterator().next();
+        Stack<Tile> dfs = new Stack<Tile>();
+        
+        dfs.push(start);
+        tilesToExplore.remove(start);
+        
+        while (!dfs.empty()) {
+            Tile current = dfs.pop();
+            for (Tile neighbor : adjacency.get(current)) {
+                if (tilesToExplore.contains(neighbor)) {
+                    dfs.add(neighbor);
+                    tilesToExplore.remove(neighbor);
+                }
+            }
+        }
+
+        return tilesToExplore.isEmpty();
     }
 }
