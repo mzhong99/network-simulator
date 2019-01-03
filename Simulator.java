@@ -9,6 +9,7 @@ import javafx.scene.shape.*;
 import javafx.scene.input.*;
 
 import javafx.scene.paint.Color;
+import javafx.geometry.Insets;
 
 import java.util.*;
 
@@ -16,16 +17,14 @@ public class Simulator {
 
     private HashMap<String, Color> colors;
     private String simulationName;
+    private String tilePaintbrush;
     
     private Grid grid;
-    private Stage actorStage;
 
-    private List<List<Rectangle>> tileClickables;
+    private Stage actorStage;
 
     private final int TILE_GAP = 3;
     private final int TILE_LENGTH = 20;
-    private final int TOP_BORDER = 50;
-    private final int LEFT_BORDER = 50;
 
     private void initColors() {
         
@@ -39,19 +38,29 @@ public class Simulator {
         actorStage = new Stage();
         actorStage.setTitle(simulationName);
 
-        Group root = new Group();
-        Pane overlay = new Pane();
+        Group mainGroup = new Group();
+        BorderPane mainPane = new BorderPane();
+        mainGroup.getChildren().addAll(mainPane);
         
+        Node centerNode = initCenterNode();
+        Node topNode = initTopNode();
+
+        mainPane.setCenter(centerNode);
+        mainPane.setTop(topNode);
+
+        actorStage.setScene(new Scene(mainGroup));
+                
+    }
+
+    private Node initCenterNode() {
+
         final int TILE_SPACE = TILE_GAP + TILE_LENGTH;
 
-        Canvas canvas = new Canvas((2 * LEFT_BORDER) + (grid.getWidth() * TILE_SPACE),
-                                   (2 * TOP_BORDER) + (grid.getHeight() * TILE_SPACE));
-
-        tileClickables = new ArrayList<List<Rectangle>>();
+        Pane canvasOverlay = new Pane();
+        Canvas canvas = new Canvas(grid.getWidth() * TILE_SPACE,
+                                   grid.getHeight() * TILE_SPACE);
 
         for (int r = 0; r < grid.getHeight(); r++) {
-            
-            List<Rectangle> line = new ArrayList<Rectangle>();
             
             for (int c = 0; c < grid.getWidth(); c++) {
 
@@ -60,8 +69,8 @@ public class Simulator {
                 
                 Rectangle current = new Rectangle(TILE_LENGTH, TILE_LENGTH);
                 
-                current.setX(LEFT_BORDER + (c * (TILE_LENGTH + TILE_GAP)));
-                current.setY(TOP_BORDER + (r * (TILE_LENGTH + TILE_GAP)));
+                current.setX(c * (TILE_LENGTH + TILE_GAP));
+                current.setY(r * (TILE_LENGTH + TILE_GAP));
 
                 current.setStroke(colors.get(grid.getAttributeAt(r, c)));
                 current.setFill(colors.get(grid.getAttributeAt(r, c)).darker());
@@ -71,23 +80,53 @@ public class Simulator {
                     @Override
                     public void handle(MouseEvent event) {
 
-                        System.out.printf("Tile at %d %d pressed\n", row, col);
-                        System.out.printf("    Attribute: %s\n", grid.getAttributeAt(row, col));
+                        grid.setAttributeAt(row, col, tilePaintbrush);
+                        
+                        Color color = colors.get(grid.getAttributeAt(row, col));
+                        current.setStroke(color);
+                        current.setFill(color.darker());
                     }
                 });
 
-                overlay.getChildren().addAll(current);
-                line.add(current);
-
+                canvasOverlay.getChildren().addAll(current);
+                grid.setRectangleAt(r, c, current);
             }
-            
-            tileClickables.add(line);
         }
 
-        root.getChildren().addAll(canvas, overlay);
-        actorStage.setScene(new Scene(root, 1280, 720));
-        actorStage.show();
-                
+        canvasOverlay.getChildren().addAll(canvas);
+
+        Group centerGroup = new Group();
+        centerGroup.getChildren().addAll(canvasOverlay);
+
+        return centerGroup;
+    }
+
+    private Node initTopNode() {
+
+        HBox hbox = new HBox(6);
+        hbox.setPadding(new Insets(12, 12, 12, 12));
+
+        Button floorButton = new Button("Floor");
+        Button wallButton = new Button("Wall");
+
+        floorButton.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent event) {
+                tilePaintbrush = "floor";
+            }
+        });
+
+        wallButton.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent event) {
+                tilePaintbrush = "wall";
+            }
+        });
+
+        hbox.getChildren().addAll(floorButton, wallButton);
+        return hbox;
     }
 
     public Simulator(int width, int height, String simulationName, String[][] attributes) {
@@ -95,6 +134,8 @@ public class Simulator {
         initColors();
 
         this.simulationName = simulationName;
+        this.tilePaintbrush = "floor";
+
         this.grid = new Grid(width, height);
 
         for (int r = 0; r < height; r++) {

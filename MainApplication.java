@@ -196,7 +196,7 @@ public class MainApplication extends Application {
                 try {
                     
                     width = Integer.parseInt(widthString);
-                    height = Integer.parseInt(widthString);
+                    height = Integer.parseInt(heightString);
                     
                     if (width <= 0 || height <= 0) {
                         throw new Exception("Invalid width / height");

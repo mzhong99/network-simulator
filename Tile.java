@@ -3,12 +3,15 @@ import java.util.ArrayList;
 
 import java.lang.IllegalArgumentException;
 
+import javafx.scene.shape.*;
+
 public class Tile {
     
     private final int row;
     private final int col;
     private final Grid grid;
     private String attribute;
+    private Rectangle rectangle;
 
     private boolean isInRange(Tile tile) {
         return tile.row >= 0 && tile.row < grid.getHeight()
@@ -46,11 +49,13 @@ public class Tile {
         this.attribute = rhs.attribute;
     }
 
-    public int getRow()          { return this.row;       }
-    public int getCol()          { return this.col;       }
-    public String getAttribute() { return this.attribute; }
+    public int getRow()             { return this.row;       }
+    public int getCol()             { return this.col;       }
+    public String getAttribute()    { return this.attribute; }
+    public Rectangle getRectangle() { return this.rectangle; }
 
-    public void setAttribute(String attribute) { this.attribute = attribute; }
+    public void setAttribute(String attribute)    { this.attribute = attribute; }
+    public void setRectangle(Rectangle rectangle) { this.rectangle = rectangle; }
 
     private Tile up()    { return new Tile(row - 1, col, grid); }
     private Tile down()  { return new Tile(row + 1, col, grid); }
