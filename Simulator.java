@@ -12,6 +12,8 @@ import javafx.scene.text.*;
 import javafx.scene.paint.Color;
 import javafx.geometry.Insets;
 
+import javafx.collections.ObservableList;
+
 import java.util.*;
 import java.io.*;
 
@@ -26,10 +28,14 @@ public class Simulator {
     private TextArea consoleOutput;
 
     private MessageLog messageLog;
+    private ListView<String> scheduleBaseOutput;
     
     private Grid grid;
 
     private Stage actorStage;
+
+    private ScheduleGenerator scheduleGenerator;
+    private List<List<Tile>> actorSchedules;
 
     private final int TILE_GAP = 3;
     private final int TILE_LENGTH = 20;
@@ -59,6 +65,7 @@ public class Simulator {
         mainPane.setTop(initTopNode());
         mainPane.setLeft(initLeftNode());
         mainPane.setBottom(initBottomNode());
+        mainPane.setRight(initRightNode());
 
         BorderPane.setMargin(mainPane.getCenter(), 
                              new Insets(12, 12, 12, 12));
@@ -230,7 +237,64 @@ public class Simulator {
             }
         });
 
-        vbox.getChildren().addAll(saveAs, checkContiguousButton);
+        Button generateSchedulesButton = new Button("Generate Schedules");
+        generateSchedulesButton.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent event) {
+                
+                TextInputDialog dialog = new TextInputDialog();
+                
+                dialog.setTitle("Generate Schedules...");
+                dialog.setHeaderText("How many actor schedules would you like?");
+                dialog.setContentText("Enter a positive integer:");
+                
+                Optional<String> response = dialog.showAndWait();
+                
+                if (!response.isPresent()) {
+                    
+                    messageLog.println(
+                        "[Error] No input detected for " 
+                      + "number of schedules. No schedules were generated."
+                    );
+                }
+                else {
+
+                    try {
+
+                        int N = Integer.parseInt(response.get());
+
+                        if (N <= 0) {
+                            throw new IllegalArgumentException();
+                        }
+                        
+                        scheduleGenerator = new ScheduleGenerator(grid);
+                        actorSchedules = scheduleGenerator.generateSchedules(N);
+
+                        ObservableList<String> list = scheduleBaseOutput.getItems();
+                        list.setAll(ScheduleGenerator.getStringList(actorSchedules));
+                    }
+                    catch(IllegalArgumentException ex) {
+
+                        messageLog.println(
+                            "[Error] Invalid input detected for "
+                          + "number of schedules. No schedules were generated."
+                        );
+                    }
+                }
+            }
+        });
+
+        saveAs.setMaxWidth(Double.MAX_VALUE);
+        checkContiguousButton.setMaxWidth(Double.MAX_VALUE);
+        generateSchedulesButton.setMaxWidth(Double.MAX_VALUE);
+
+        vbox.getChildren().addAll(
+            saveAs, 
+            checkContiguousButton, 
+            generateSchedulesButton
+        );
+
         return vbox;
     }
 
@@ -243,6 +307,20 @@ public class Simulator {
         vbox.getChildren().addAll(consoleLabel, outputTextArea);
 
         vbox.setPadding(new Insets(12, 12, 12, 12));
+        return vbox;
+    }
+
+    public Node initRightNode() {
+        
+        VBox vbox = new VBox(6);
+        vbox.setPadding(new Insets(12, 12, 12, 12));
+
+        Text outputLabel = new Text("Schedules");
+
+        scheduleBaseOutput = new ListView<String>();
+        scheduleBaseOutput.setPrefWidth(300);
+
+        vbox.getChildren().addAll(outputLabel, scheduleBaseOutput);
         return vbox;
     }
 
