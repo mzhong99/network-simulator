@@ -89,6 +89,8 @@ public class ScheduleGenerator {
         return schedules;
     }
 
+    // for ONE ACTOR's schedule
+    // get paths for all periods
     public List<List<Tile>> getPathsForSchedule(List<Tile> schedule) {
 
         if (schedule.size() <= 1) {
@@ -138,6 +140,12 @@ public class ScheduleGenerator {
         }
         while (!parents[current.getRow()][current.getCol()].equals(current));
 
-        return path;
+        ArrayList<Tile> convertedPath = new ArrayList<Tile>();
+        
+        for (Tile copy : path) {
+            convertedPath.add(copy);
+        }
+
+        return convertedPath;
     }
 }

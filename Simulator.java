@@ -35,7 +35,26 @@ public class Simulator {
     private Stage actorStage;
 
     private ScheduleGenerator scheduleGenerator;
+    private LocationData locationData;
+    
     private List<List<Tile>> actorSchedules;
+    private List<List<List<Tile>>> actorPaths;
+
+    private Button saveAsButton;
+    private Button checkContiguousButton;
+    private Button generateSchedulesButton;
+
+    private Button simulateButton;
+    private Button resetButton;
+
+    private Button stepForwardButton;
+    private Button stepBackwardButton;
+
+    private Button nextPhaseButton;
+    private Button prevPhaseButton;
+
+    private boolean recentlyVerified = false;
+    private boolean recentlyGeneratedSchedules = false;
 
     private final int TILE_GAP = 3;
     private final int TILE_LENGTH = 20;
@@ -93,27 +112,7 @@ public class Simulator {
                 current.setStroke(colors.get(grid.getAttributeAt(r, c)));
                 current.setFill(colors.get(grid.getAttributeAt(r, c)).darker());
                 
-                current.setOnMousePressed(new EventHandler<MouseEvent>() {
-
-                    @Override
-                    public void handle(MouseEvent event) {
-                        
-                        String oldAttribute = grid.getAttributeAt(row, col);
-                        String newAttribute = tilePaintbrush;
-                        
-                        boolean oldIsNew = oldAttribute.equals(newAttribute);
-
-                        this.setTile(oldIsNew ? "wall" : tilePaintbrush);
-                    }
-
-                    public void setTile(String brush) {
-                        grid.setAttributeAt(row, col, brush);
-                        Color color = colors.get(grid.getAttributeAt(row, col));
-                        current.setStroke(color);
-                        current.setFill(color.darker());
-                    }
-
-                });
+                initTileEventHandler(row, col, current);
 
                 canvasOverlay.getChildren().addAll(current);
                 grid.setRectangleAt(r, c, current);
@@ -124,6 +123,37 @@ public class Simulator {
         centerGroup.getChildren().addAll(canvasOverlay);
 
         return centerGroup;
+    }
+
+    private void initTileEventHandler(int row, int col, Rectangle current) {
+
+        current.setOnMousePressed(new EventHandler<MouseEvent>() {
+
+            @Override
+            public void handle(MouseEvent event) {
+                
+                recentlyVerified = false;
+                recentlyGeneratedSchedules = false;
+                
+                simulateButton.setDisable(true);
+
+                String oldAttribute = grid.getAttributeAt(row, col);
+                String newAttribute = tilePaintbrush;
+                
+                boolean oldIsNew = oldAttribute.equals(newAttribute);
+
+                this.setTile(oldIsNew ? "wall" : tilePaintbrush);
+            }
+
+            public void setTile(String brush) {
+                grid.setAttributeAt(row, col, brush);
+                Color color = colors.get(grid.getAttributeAt(row, col));
+                current.setStroke(color);
+                current.setFill(color.darker());
+            }
+
+        });
+        
     }
 
     private Node initTopNode() {
@@ -174,8 +204,8 @@ public class Simulator {
         Text colorTextHUD = new Text("Selection:");
         vbox.getChildren().addAll(colorTextHUD, currentColorDisplay);
 
-        Button saveAs = new Button("Save As...");
-        saveAs.setOnAction(new EventHandler<ActionEvent>() {
+        saveAsButton = new Button("Save As...");
+        saveAsButton.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
             public void handle(ActionEvent event) {
@@ -225,19 +255,23 @@ public class Simulator {
 
         });
 
-        Button checkContiguousButton = new Button("Verify Grid");
+        checkContiguousButton = new Button("Verify Grid");
         checkContiguousButton.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
             public void handle(ActionEvent event) {
+                
                 messageLog.println(grid.isContiguous() 
                     ? "[Verified] Grid is one contiguous body."
                     : "[Warning] Grid is not contiguous. Unreachable tiles exist."
                 );
+
+                recentlyVerified = grid.isContiguous();
+                simulateButton.setDisable(!canSimulate());
             }
         });
 
-        Button generateSchedulesButton = new Button("Generate Schedules");
+        generateSchedulesButton = new Button("Generate Schedules");
         generateSchedulesButton.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
@@ -273,6 +307,9 @@ public class Simulator {
 
                         ObservableList<String> list = scheduleBaseOutput.getItems();
                         list.setAll(ScheduleGenerator.getStringList(actorSchedules));
+
+                        recentlyGeneratedSchedules = true;
+                        simulateButton.setDisable(!canSimulate());
                     }
                     catch(IllegalArgumentException ex) {
 
@@ -285,12 +322,12 @@ public class Simulator {
             }
         });
 
-        saveAs.setMaxWidth(Double.MAX_VALUE);
+        saveAsButton.setMaxWidth(Double.MAX_VALUE);
         checkContiguousButton.setMaxWidth(Double.MAX_VALUE);
         generateSchedulesButton.setMaxWidth(Double.MAX_VALUE);
 
         vbox.getChildren().addAll(
-            saveAs, 
+            saveAsButton, 
             checkContiguousButton, 
             generateSchedulesButton
         );
@@ -320,8 +357,211 @@ public class Simulator {
         scheduleBaseOutput = new ListView<String>();
         scheduleBaseOutput.setPrefWidth(300);
 
-        vbox.getChildren().addAll(outputLabel, scheduleBaseOutput);
+        stepForwardButton = new Button("Step Forward");
+        stepForwardButton.setOnAction(new EventHandler<ActionEvent>() {
+            
+            @Override
+            public void handle(ActionEvent event) {
+
+                locationData.increaseStep();
+                
+                stepForwardButton.setDisable(!locationData.canIncreaseStep());
+                stepBackwardButton.setDisable(!locationData.canDecreaseStep());
+
+                drawSimulation();
+            }
+        });
+
+        stepBackwardButton = new Button("Step Backward");
+        stepBackwardButton.setOnAction(new EventHandler<ActionEvent>() {
+            
+            @Override
+            public void handle(ActionEvent event) {
+                
+                locationData.decreaseStep();
+
+                stepForwardButton.setDisable(!locationData.canIncreaseStep());
+                stepBackwardButton.setDisable(!locationData.canDecreaseStep());
+
+                drawSimulation();
+            }
+        });
+        
+        nextPhaseButton = new Button("Next Phase");
+        nextPhaseButton.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent event) {
+                
+                locationData.increasePeriod();
+
+                nextPhaseButton.setDisable(!locationData.canIncreasePeriod());
+                prevPhaseButton.setDisable(!locationData.canDecreasePeriod());
+
+                stepForwardButton.setDisable(!locationData.canIncreaseStep());
+                stepBackwardButton.setDisable(!locationData.canDecreaseStep());
+
+                drawSimulation();
+            }
+        });
+
+        prevPhaseButton = new Button("Previous Phase");
+        prevPhaseButton.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent event) {
+
+                locationData.decreasePeriod();
+
+                nextPhaseButton.setDisable(!locationData.canIncreasePeriod());
+                prevPhaseButton.setDisable(!locationData.canDecreasePeriod());
+
+                stepForwardButton.setDisable(!locationData.canIncreaseStep());
+                stepBackwardButton.setDisable(!locationData.canDecreaseStep());
+
+                drawSimulation();
+            }
+        });
+
+        GridPane simulationControls = new GridPane();
+
+        simulationControls.setHgap(6);
+        simulationControls.setVgap(6);
+        
+        simulationControls.setMaxWidth(Double.MAX_VALUE);
+        
+        simulationControls.add(stepBackwardButton, 0, 0);
+        simulationControls.add(stepForwardButton, 1, 0);
+
+        simulationControls.add(prevPhaseButton, 0, 1);
+        simulationControls.add(nextPhaseButton, 1, 1);
+
+        Button resetButton = new Button("Reset");
+        resetButton.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent event) {
+                
+                saveAsButton.setDisable(false);
+                checkContiguousButton.setDisable(false);
+                generateSchedulesButton.setDisable(false);
+
+                simulateButton.setDisable(true);
+                resetButton.setDisable(true);
+
+                stepForwardButton.setDisable(true);
+                stepBackwardButton.setDisable(true);
+
+                prevPhaseButton.setDisable(true);
+                nextPhaseButton.setDisable(true);
+
+                enableAndRedrawTiles();
+            }
+        });
+
+        simulateButton = new Button("Simulate");
+        simulateButton.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent event) {
+
+                messageLog.println("[Info] Simulation generated!");
+
+                simulateButton.setDisable(true);
+                resetButton.setDisable(false);
+
+                saveAsButton.setDisable(true);
+                checkContiguousButton.setDisable(true);
+                generateSchedulesButton.setDisable(true);
+
+                locationData = new LocationData(
+                    scheduleGenerator, 
+                    actorSchedules, grid
+                );
+
+                stepForwardButton.setDisable(!locationData.canIncreaseStep());
+                stepBackwardButton.setDisable(!locationData.canDecreaseStep());
+
+                nextPhaseButton.setDisable(!locationData.canIncreasePeriod());
+                prevPhaseButton.setDisable(!locationData.canDecreasePeriod());
+
+                disableTiles();
+                drawSimulation();
+            }
+        });
+
+        simulateButton.setMaxWidth(Double.MAX_VALUE);
+        resetButton.setMaxWidth(Double.MAX_VALUE);
+
+        stepBackwardButton.setMaxWidth(Double.MAX_VALUE);
+        stepForwardButton.setMaxWidth(Double.MAX_VALUE);
+
+        nextPhaseButton.setMaxWidth(Double.MAX_VALUE);
+        prevPhaseButton.setMaxWidth(Double.MAX_VALUE);
+
+        simulateButton.setDisable(true);
+        resetButton.setDisable(true);
+
+        stepBackwardButton.setDisable(true);
+        stepForwardButton.setDisable(true);
+
+        nextPhaseButton.setDisable(true);
+        prevPhaseButton.setDisable(true);
+
+        vbox.getChildren().addAll(
+            outputLabel, 
+            scheduleBaseOutput, 
+            simulateButton,
+            resetButton,
+            simulationControls
+        );
+
         return vbox;
+    }
+
+    private boolean canSimulate() {
+        return recentlyVerified && recentlyGeneratedSchedules;
+    }
+
+    private void disableTiles() {
+        for (int r = 0; r < grid.getHeight(); r++) {
+            for (int c = 0; c < grid.getWidth(); c++) {
+                grid.getRectangleAt(r, c).setOnMousePressed(null);
+            }
+        }
+    }
+
+    private void enableAndRedrawTiles() {
+        
+        for (int r = 0; r < grid.getHeight(); r++) {
+            for (int c = 0; c < grid.getWidth(); c++) {
+
+                Rectangle rectangle = grid.getRectangleAt(r, c);
+                initTileEventHandler(r, c, grid.getRectangleAt(r, c));
+
+                String attribute = grid.getAttributeAt(r, c);
+                Color refill = colors.get(attribute);
+
+                rectangle.setFill(refill.darker());
+            }
+        }
+    }
+
+    private void drawSimulation() {
+        
+        int period = locationData.getPeriod();
+        int step = locationData.getStep();
+
+        for (Tile validTile : grid.getValidTiles()) {
+            
+            Color update = locationData.getIntensityAt(period, step, validTile);
+            
+            int row = validTile.getRow();
+            int col = validTile.getCol();
+
+            Rectangle rectangle = grid.getRectangleAt(row, col);
+            rectangle.setFill(update);
+        }
     }
 
     public Simulator(int width, int height, String simulationName, String[][] attributes) {
