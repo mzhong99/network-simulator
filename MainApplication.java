@@ -90,8 +90,8 @@ public class MainApplication extends Application {
             FileChooser fileChooser = new FileChooser();
             
             fileChooser.getExtensionFilters().addAll(
-                new FileChooser.ExtensionFilter("All Files", "*.*"),
-                new FileChooser.ExtensionFilter("Network Data Files", "*.ntwk")
+                new FileChooser.ExtensionFilter("Network Data Files", "*.ntwk"),
+                new FileChooser.ExtensionFilter("All Files", "*.*")
             );
 
             File fileToOpen = fileChooser.showOpenDialog(loadingStage);
@@ -259,10 +259,6 @@ public class MainApplication extends Application {
         int height, 
         String simulationName, 
         String[][] attributes) {
-
-        System.out.println("Starting simulation " + simulationName + " with dimensions");
-        System.out.println("    Width:  " + width);
-        System.out.println("    Height: " + height);
 
         Simulator simulator = new Simulator(width, height, simulationName, attributes);
         simulator.show();

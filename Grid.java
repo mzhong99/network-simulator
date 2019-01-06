@@ -11,6 +11,7 @@ import java.util.Stack;
 import java.lang.IllegalArgumentException;
 
 import javafx.scene.shape.Rectangle;
+import javafx.scene.control.Tooltip;
 
 public class Grid {
     
@@ -20,7 +21,7 @@ public class Grid {
     private final int width;
     private final int height;
     
-    private Tile getTileAt(int row, int col) {
+    public Tile getTileAt(int row, int col) {
 
         if (row < 0 || row >= height || col < 0 || col >= width) {
             throw new IllegalArgumentException("Attempted to access tile out of bounds");
@@ -86,7 +87,7 @@ public class Grid {
 
         return getTileAt(row, col).getAttribute();
     }
-    
+
     public void setRectangleAt(int row, int col, Rectangle rectangle) {
 
         if (row < 0 || row >= height || col < 0 || col >= width) {
@@ -103,6 +104,24 @@ public class Grid {
         }
 
         return getTileAt(row, col).getRectangle();
+    }
+
+    public void setTooltipAt(int row, int col, Tooltip tooltip) {
+
+        if (row < 0 || row >= height || col < 0 || col >= width) {
+            throw new IllegalArgumentException("Attempted to access rectangle out of bounds");
+        }
+
+        getTileAt(row, col).setTooltip(tooltip);
+    }
+
+    public Tooltip getTooltipAt(int row, int col) {
+
+        if (row < 0 || row >= height || col < 0 || col >= width) {
+            throw new IllegalArgumentException("Attempted to access rectangle out of bounds");
+        }
+
+        return getTileAt(row, col).getTooltip();
     }
 
     public Set<Tile> getValidTiles() {

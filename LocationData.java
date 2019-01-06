@@ -25,10 +25,7 @@ public class LocationData {
     private int step;
     private int[] maxStepsAllPeriods;
 
-    public LocationData(
-        ScheduleGenerator generator, 
-        List<List<Tile>> schedules,
-        Grid grid) {
+    public LocationData(ScheduleGenerator generator, List<List<Tile>> schedules, Grid grid) {
         
         this.generator = generator;
         this.schedules = schedules;
@@ -103,9 +100,7 @@ public class LocationData {
         }
     }
     
-    public int getPeriod() {
-        return period;
-    }
+    public int getPeriod() { return period; }
 
     public boolean increasePeriod() {
         if (!canIncreasePeriod()) {
@@ -125,17 +120,11 @@ public class LocationData {
         return true;
     }
 
-    public boolean canIncreasePeriod() {
-        return period + 1 < lastTransitionPeriod;
-    }
+    public boolean canIncreasePeriod() { return period + 1 < lastTransitionPeriod; }
+    public boolean canDecreasePeriod() { return period > 0;                        }
 
-    public boolean canDecreasePeriod() {
-        return period > 0;
-    }
-
-    public int getStep() {
-        return step;
-    }
+    public int getStep()    { return step;                       }
+    public int getMaxStep() { return maxStepsAllPeriods[period]; }
 
     public boolean increaseStep() {
         if (!canIncreaseStep()) {
@@ -153,15 +142,18 @@ public class LocationData {
         return true;
     }
 
-    public boolean canIncreaseStep() {
-        return step + 1 < maxStepsAllPeriods[period];
+    public boolean canIncreaseStep() { return step + 1 < maxStepsAllPeriods[period]; }
+    public boolean canDecreaseStep() { return step > 0;                              }
+    public boolean setStep(int updatedStep) {
+        if (updatedStep >= 0 && updatedStep < maxStepsAllPeriods[period]) {
+            this.step = updatedStep;
+            return true;
+        }
+        return false;
     }
 
-    public boolean canDecreaseStep() {
-        return step > 0;
-    }
+    public int getUsageAt(int period, int step, Tile tile) {
 
-    private int getUsageAt(int period, int step, Tile tile) {
         return tileUsage.get(period).get(step).get(tile);
     }
 
@@ -170,7 +162,7 @@ public class LocationData {
         int usage = getUsageAt(period, step, tile);
 
         double scaleFactor = ((double) usage) / ((double) maxUsage);
-        scaleFactor = Math.sqrt(Math.sqrt(scaleFactor));
+        scaleFactor = (0.7 * Math.sqrt(Math.sqrt(scaleFactor))) + 0.3;
 
         float red = (float) Math.max(0.0, -1.0 + (2.0 * scaleFactor));
         float green = (float) Math.min(1.0, 2.0 - (2.0 * scaleFactor));

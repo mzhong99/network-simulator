@@ -33,12 +33,11 @@ public class MessageLog {
         buffer.add(line);
 
         StringBuilder sbr = new StringBuilder();
-        ListIterator<String> it 
-            = ((LinkedList<String>)buffer).listIterator(buffer.size()); 
+        ListIterator<String> it = ((LinkedList<String>)buffer).listIterator();
         
-        while (it.hasPrevious()) {
-            sbr.append(it.previous());
-            if (it.hasPrevious()) {
+        while (it.hasNext()) {
+            sbr.append(it.next());
+            if (it.hasNext()) {
                 sbr.append("\n");
             }
         }

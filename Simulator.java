@@ -1,4 +1,6 @@
 import javafx.event.*;
+import javafx.beans.value.*;
+
 import javafx.stage.*;
 import javafx.scene.*;
 
@@ -53,6 +55,8 @@ public class Simulator {
     private Button nextPhaseButton;
     private Button prevPhaseButton;
 
+    private Slider stepSlider;
+
     private boolean recentlyVerified = false;
     private boolean recentlyGeneratedSchedules = false;
 
@@ -76,9 +80,9 @@ public class Simulator {
         actorStage = new Stage();
         actorStage.setTitle(simulationName);
 
-        Group mainGroup = new Group();
+        StackPane rootPane = new StackPane();
         BorderPane mainPane = new BorderPane();
-        mainGroup.getChildren().addAll(mainPane);
+        rootPane.getChildren().addAll(mainPane);
         
         mainPane.setCenter(initCenterNode());
         mainPane.setTop(initTopNode());
@@ -89,10 +93,11 @@ public class Simulator {
         BorderPane.setMargin(mainPane.getCenter(), 
                              new Insets(12, 12, 12, 12));
 
-        actorStage.setScene(new Scene(mainGroup));
-                
+        actorStage.setScene(new Scene(rootPane));
     }
 
+    // Initializers for center node of UI
+    // ========================================================================
     private Node initCenterNode() {
 
         Pane canvasOverlay = new Pane();
@@ -153,13 +158,20 @@ public class Simulator {
             }
 
         });
+
+        Tooltip coordinateTooltip = new Tooltip();
+        coordinateTooltip.setText("(" + row + ", " + col + ")");
         
+        grid.setTooltipAt(row, col, coordinateTooltip);
+        Tooltip.install(current, coordinateTooltip);
     }
 
+    // Initializers for top node of UI
+    // ========================================================================
     private Node initTopNode() {
 
         HBox hbox = new HBox(6);
-        hbox.setPadding(new Insets(12, 12, 12, 12));
+        hbox.setPadding(new Insets(12, 12, 6, 12));
 
         Button[] buttons = {
             new Button("Floor"),
@@ -196,13 +208,30 @@ public class Simulator {
         return hbox;
     }
 
+    // Initializers for left node of UI
+    // ========================================================================
     private Node initLeftNode() {
 
         VBox vbox = new VBox(6);
-        vbox.setPadding(new Insets(12, 12, 12, 12));
+        vbox.setPadding(new Insets(12, 6, 12, 12));
 
         Text colorTextHUD = new Text("Selection:");
         vbox.getChildren().addAll(colorTextHUD, currentColorDisplay);
+
+        initSaveAsButton();
+        initCheckContiguousButton();
+        initGenerateSchedulesButton();
+
+        vbox.getChildren().addAll(
+            saveAsButton, 
+            checkContiguousButton, 
+            generateSchedulesButton
+        );
+
+        return vbox;
+    }
+
+    private void initSaveAsButton() {
 
         saveAsButton = new Button("Save As...");
         saveAsButton.setOnAction(new EventHandler<ActionEvent>() {
@@ -245,16 +274,18 @@ public class Simulator {
 
                 writer.flush();
                 writer.close();
+
                 messageLog.println(
-                    "File " 
-                  + file.getName() 
-                  + " saved. " 
-                  + (new Date()).toString()
+                    "[Info] File " + file.getName() + " saved. " + (new Date()).toString()
                 );
             }
 
         });
 
+        saveAsButton.setMaxWidth(Double.MAX_VALUE);
+    }
+
+    private void initCheckContiguousButton() {
         checkContiguousButton = new Button("Verify Grid");
         checkContiguousButton.setOnAction(new EventHandler<ActionEvent>() {
 
@@ -270,6 +301,11 @@ public class Simulator {
                 simulateButton.setDisable(!canSimulate());
             }
         });
+
+        checkContiguousButton.setMaxWidth(Double.MAX_VALUE);
+    }
+
+    private void initGenerateSchedulesButton() {
 
         generateSchedulesButton = new Button("Generate Schedules");
         generateSchedulesButton.setOnAction(new EventHandler<ActionEvent>() {
@@ -322,20 +358,12 @@ public class Simulator {
             }
         });
 
-        saveAsButton.setMaxWidth(Double.MAX_VALUE);
-        checkContiguousButton.setMaxWidth(Double.MAX_VALUE);
         generateSchedulesButton.setMaxWidth(Double.MAX_VALUE);
-
-        vbox.getChildren().addAll(
-            saveAsButton, 
-            checkContiguousButton, 
-            generateSchedulesButton
-        );
-
-        return vbox;
     }
 
-    public Node initBottomNode() {
+    // Initializers for bottom node of UI
+    // ========================================================================
+    private Node initBottomNode() {
 
         VBox vbox = new VBox(6);
 
@@ -343,21 +371,53 @@ public class Simulator {
         Text consoleLabel = new Text("Message Log");
         vbox.getChildren().addAll(consoleLabel, outputTextArea);
 
-        vbox.setPadding(new Insets(12, 12, 12, 12));
+        vbox.setPadding(new Insets(6, 12, 12, 12));
         return vbox;
     }
 
-    public Node initRightNode() {
+    // Initializers for right node of UI
+    // ========================================================================
+    private Node initRightNode() {
         
         VBox vbox = new VBox(6);
-        vbox.setPadding(new Insets(12, 12, 12, 12));
+        vbox.setPadding(new Insets(12, 12, 12, 6));
 
         Text outputLabel = new Text("Schedules");
 
         scheduleBaseOutput = new ListView<String>();
         scheduleBaseOutput.setPrefWidth(300);
 
+        initStepForwardButton();
+        initStepBackwardButton();
+        
+        initNextPhaseButton();
+        initPrevPhaseButton();
+
+        initSimulateButton();
+        initResetButton();
+
+        GridPane simulationControls = initSimulationControls();
+
+        initStepSlider();
+
+        initRightStartingNodeBehavior();
+
+        vbox.getChildren().addAll(
+            outputLabel, 
+            scheduleBaseOutput, 
+            simulateButton,
+            resetButton,
+            simulationControls,
+            stepSlider
+        );
+
+        return vbox;
+    }
+
+    private void initStepForwardButton() {
+
         stepForwardButton = new Button("Step Forward");
+        stepForwardButton.setMaxWidth(Double.MAX_VALUE);
         stepForwardButton.setOnAction(new EventHandler<ActionEvent>() {
             
             @Override
@@ -365,14 +425,19 @@ public class Simulator {
 
                 locationData.increaseStep();
                 
-                stepForwardButton.setDisable(!locationData.canIncreaseStep());
-                stepBackwardButton.setDisable(!locationData.canDecreaseStep());
+                updateCanUseRightButtons();
+                updateStepSliderBounds();
 
                 drawSimulation();
+                showUsageTooltips();
             }
         });
+    }
 
+    private void initStepBackwardButton() {
+        
         stepBackwardButton = new Button("Step Backward");
+        stepBackwardButton.setMaxWidth(Double.MAX_VALUE);
         stepBackwardButton.setOnAction(new EventHandler<ActionEvent>() {
             
             @Override
@@ -380,14 +445,19 @@ public class Simulator {
                 
                 locationData.decreaseStep();
 
-                stepForwardButton.setDisable(!locationData.canIncreaseStep());
-                stepBackwardButton.setDisable(!locationData.canDecreaseStep());
+                updateCanUseRightButtons();
+                updateStepSliderBounds();
 
                 drawSimulation();
+                showUsageTooltips();
             }
         });
-        
+    }
+
+    private void initNextPhaseButton() {
+
         nextPhaseButton = new Button("Next Phase");
+        nextPhaseButton.setMaxWidth(Double.MAX_VALUE);
         nextPhaseButton.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
@@ -395,17 +465,19 @@ public class Simulator {
                 
                 locationData.increasePeriod();
 
-                nextPhaseButton.setDisable(!locationData.canIncreasePeriod());
-                prevPhaseButton.setDisable(!locationData.canDecreasePeriod());
-
-                stepForwardButton.setDisable(!locationData.canIncreaseStep());
-                stepBackwardButton.setDisable(!locationData.canDecreaseStep());
+                updateCanUseRightButtons();
+                updateStepSliderBounds();
 
                 drawSimulation();
+                showUsageTooltips();
             }
         });
+    }
+
+    private void initPrevPhaseButton() {
 
         prevPhaseButton = new Button("Previous Phase");
+        prevPhaseButton.setMaxWidth(Double.MAX_VALUE);
         prevPhaseButton.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
@@ -413,30 +485,19 @@ public class Simulator {
 
                 locationData.decreasePeriod();
 
-                nextPhaseButton.setDisable(!locationData.canIncreasePeriod());
-                prevPhaseButton.setDisable(!locationData.canDecreasePeriod());
-
-                stepForwardButton.setDisable(!locationData.canIncreaseStep());
-                stepBackwardButton.setDisable(!locationData.canDecreaseStep());
+                updateCanUseRightButtons();
+                updateStepSliderBounds();
 
                 drawSimulation();
+                showUsageTooltips();
             }
         });
+    }
 
-        GridPane simulationControls = new GridPane();
+    private void initResetButton() {
 
-        simulationControls.setHgap(6);
-        simulationControls.setVgap(6);
-        
-        simulationControls.setMaxWidth(Double.MAX_VALUE);
-        
-        simulationControls.add(stepBackwardButton, 0, 0);
-        simulationControls.add(stepForwardButton, 1, 0);
-
-        simulationControls.add(prevPhaseButton, 0, 1);
-        simulationControls.add(nextPhaseButton, 1, 1);
-
-        Button resetButton = new Button("Reset");
+        resetButton = new Button("Reset");
+        resetButton.setMaxWidth(Double.MAX_VALUE);
         resetButton.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
@@ -455,11 +516,21 @@ public class Simulator {
                 prevPhaseButton.setDisable(true);
                 nextPhaseButton.setDisable(true);
 
+                stepSlider.setDisable(true);
+                stepSlider.setValue(0);
+
+                stepSlider.setMin(0);
+                stepSlider.setMax(1);
+
                 enableAndRedrawTiles();
             }
         });
+    }
+
+    private void initSimulateButton() {
 
         simulateButton = new Button("Simulate");
+        simulateButton.setMaxWidth(Double.MAX_VALUE);
         simulateButton.setOnAction(new EventHandler<ActionEvent>() {
 
             @Override
@@ -476,29 +547,42 @@ public class Simulator {
 
                 locationData = new LocationData(
                     scheduleGenerator, 
-                    actorSchedules, grid
+                    actorSchedules, 
+                    grid
                 );
 
-                stepForwardButton.setDisable(!locationData.canIncreaseStep());
-                stepBackwardButton.setDisable(!locationData.canDecreaseStep());
+                updateCanUseRightButtons();
+                updateStepSliderBounds();
 
-                nextPhaseButton.setDisable(!locationData.canIncreasePeriod());
-                prevPhaseButton.setDisable(!locationData.canDecreasePeriod());
+                stepSlider.setDisable(false);
 
-                disableTiles();
                 drawSimulation();
+                disableTiles();
+                showUsageTooltips();
             }
         });
+    }
 
-        simulateButton.setMaxWidth(Double.MAX_VALUE);
-        resetButton.setMaxWidth(Double.MAX_VALUE);
+    private GridPane initSimulationControls() {
 
-        stepBackwardButton.setMaxWidth(Double.MAX_VALUE);
-        stepForwardButton.setMaxWidth(Double.MAX_VALUE);
+        GridPane simulationControls = new GridPane();
 
-        nextPhaseButton.setMaxWidth(Double.MAX_VALUE);
-        prevPhaseButton.setMaxWidth(Double.MAX_VALUE);
+        simulationControls.setHgap(6);
+        simulationControls.setVgap(6);
+        
+        simulationControls.setMaxWidth(Double.MAX_VALUE);
+        
+        simulationControls.add(stepBackwardButton, 0, 0);
+        simulationControls.add(stepForwardButton, 1, 0);
 
+        simulationControls.add(prevPhaseButton, 0, 1);
+        simulationControls.add(nextPhaseButton, 1, 1);
+
+        return simulationControls;
+    }
+
+    private void initRightStartingNodeBehavior() {
+        
         simulateButton.setDisable(true);
         resetButton.setDisable(true);
 
@@ -507,27 +591,107 @@ public class Simulator {
 
         nextPhaseButton.setDisable(true);
         prevPhaseButton.setDisable(true);
-
-        vbox.getChildren().addAll(
-            outputLabel, 
-            scheduleBaseOutput, 
-            simulateButton,
-            resetButton,
-            simulationControls
-        );
-
-        return vbox;
+        stepSlider.setDisable(true);
     }
 
-    private boolean canSimulate() {
+    private void initStepSlider() {
+        
+        stepSlider = new Slider(0, 1, 1);
+        stepSlider.setBlockIncrement(1);
+        stepSlider.setMajorTickUnit(1);
+        stepSlider.setMinorTickCount(1);
+        stepSlider.setShowTickLabels(true);
+
+        stepSlider.valueProperty().addListener(new ChangeListener<Number>() {
+
+            @Override
+            public void changed(
+                ObservableValue<? extends Number> observable,
+                Number oldValue,
+                Number newValue) {
+
+                stepSlider.setValue(Math.round(newValue.doubleValue()));
+            }
+        });
+
+        stepSlider.valueProperty().addListener(new ChangeListener<Number>() {
+
+            @Override
+            public void changed(
+                ObservableValue<? extends Number> observable,
+                Number oldValue,
+                Number newValue) {
+
+                int oldStep = (int)Math.round(oldValue.doubleValue());
+                int newStep = (int)Math.round(newValue.doubleValue());
+
+                if (oldStep != newStep) {
+                    
+                    int step = newStep - 1;
+                    locationData.setStep(step);
+
+                    updateCanUseRightButtons();
+                    drawSimulation();
+                    showUsageTooltips();
+                }
+            }
+        });
+    }
+
+    private void updateStepSliderBounds() {
+
+        stepSlider.setMin(1);
+        stepSlider.setMax(locationData.getMaxStep() + 1);
+        stepSlider.setValue(locationData.getStep() + 1);
+        stepSlider.setMajorTickUnit(locationData.getMaxStep());
+    }
+
+    private void updateCanUseRightButtons() {
+
+        stepForwardButton.setDisable(!locationData.canIncreaseStep());
+        stepBackwardButton.setDisable(!locationData.canDecreaseStep());
+
+        nextPhaseButton.setDisable(!locationData.canIncreasePeriod());
+        prevPhaseButton.setDisable(!locationData.canDecreasePeriod());
+    }
+
+    private boolean canSimulate() { 
+
         return recentlyVerified && recentlyGeneratedSchedules;
     }
 
     private void disableTiles() {
+
         for (int r = 0; r < grid.getHeight(); r++) {
+            
             for (int c = 0; c < grid.getWidth(); c++) {
-                grid.getRectangleAt(r, c).setOnMousePressed(null);
+                
+                Rectangle current = grid.getRectangleAt(r, c);
+                
+                current.setOnMousePressed(null);
+                
+                int period = locationData.getPeriod();
+                int step = locationData.getStep();
+                Tile tile = grid.getTileAt(r, c);
+
+                Tooltip usageTooltip = grid.getTooltipAt(r, c);
+                usageTooltip.setText("Usage: 0");
             }
+        }
+    }
+
+    private void showUsageTooltips() {
+
+        for (Tile validTile : grid.getValidTiles()) {
+            
+            int row = validTile.getRow();
+            int col = validTile.getCol();
+            
+            int period = locationData.getPeriod();
+            int step = locationData.getStep();
+
+            Tooltip usageTooltip = grid.getTooltipAt(row, col);
+            usageTooltip.setText("Usage: " + locationData.getUsageAt(period, step, validTile));
         }
     }
 
@@ -589,7 +753,12 @@ public class Simulator {
     }
 
     public void show() {
+        
         actorStage.show();
+
+        messageLog.println("[Info] Started a simulation with the following dimensions:");
+        messageLog.println("[Info] Width: " + grid.getWidth());
+        messageLog.println("[Info] Height: " + grid.getHeight());
     }
 }
 

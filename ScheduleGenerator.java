@@ -140,6 +140,8 @@ public class ScheduleGenerator {
         }
         while (!parents[current.getRow()][current.getCol()].equals(current));
 
+        path.addFirst(from);
+
         ArrayList<Tile> convertedPath = new ArrayList<Tile>();
         
         for (Tile copy : path) {

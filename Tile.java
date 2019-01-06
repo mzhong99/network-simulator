@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.lang.IllegalArgumentException;
 
 import javafx.scene.shape.*;
+import javafx.scene.control.*;
 
 public class Tile {
     
@@ -12,6 +13,7 @@ public class Tile {
     private final Grid grid;
     private String attribute;
     private Rectangle rectangle;
+    private Tooltip tooltip;
 
     private boolean isInRange(Tile tile) {
         return tile.row >= 0 && tile.row < grid.getHeight()
@@ -53,9 +55,11 @@ public class Tile {
     public int getCol()             { return this.col;       }
     public String getAttribute()    { return this.attribute; }
     public Rectangle getRectangle() { return this.rectangle; }
+    public Tooltip getTooltip()     { return this.tooltip;   }
 
     public void setAttribute(String attribute)    { this.attribute = attribute; }
     public void setRectangle(Rectangle rectangle) { this.rectangle = rectangle; }
+    public void setTooltip(Tooltip tooltip)       { this.tooltip   = tooltip;   }
 
     private Tile up()    { return new Tile(row - 1, col, grid); }
     private Tile down()  { return new Tile(row + 1, col, grid); }
