@@ -14,6 +14,9 @@ import javafx.scene.text.*;
 import javafx.scene.paint.Color;
 import javafx.geometry.Insets;
 
+import java.lang.Thread;
+import javafx.concurrent.Task;
+
 import javafx.collections.ObservableList;
 
 import java.util.*;
@@ -35,6 +38,7 @@ public class Simulator {
     private Grid grid;
 
     private Stage actorStage;
+    private Scene mainScene;
 
     private ScheduleGenerator scheduleGenerator;
     private LocationData locationData;
@@ -93,7 +97,8 @@ public class Simulator {
         BorderPane.setMargin(mainPane.getCenter(), 
                              new Insets(12, 12, 12, 12));
 
-        actorStage.setScene(new Scene(rootPane));
+        mainScene = new Scene(rootPane);
+        actorStage.setScene(mainScene);
     }
 
     // Initializers for center node of UI
@@ -124,10 +129,16 @@ public class Simulator {
             }
         }
 
-        Group centerGroup = new Group();
-        centerGroup.getChildren().addAll(canvasOverlay);
+        StackPane wrapper = new StackPane();
+        wrapper.getChildren().addAll(canvasOverlay);
 
-        return centerGroup;
+        ScrollPane outerPane = new ScrollPane();
+        outerPane.setContent(wrapper);
+
+        outerPane.setHvalue(0.5);
+        outerPane.setVvalue(0.5);
+
+        return outerPane;
     }
 
     private void initTileEventHandler(int row, int col, Rectangle current) {
@@ -536,10 +547,27 @@ public class Simulator {
             @Override
             public void handle(ActionEvent event) {
 
-                messageLog.println("[Info] Simulation generated!");
+                Task<Boolean> task = new Task<Boolean>() {
+
+                    @Override
+                    protected Boolean call() {
+                        
+                        mainScene.setCursor(Cursor.WAIT);
+                        runSimulation();
+                        mainScene.setCursor(Cursor.DEFAULT);
+
+                        return true;
+                    }
+                };
+
+                Thread thread = new Thread(task);
+                thread.setDaemon(true);
+                thread.start();
+            }
+
+            public void runSimulation() {
 
                 simulateButton.setDisable(true);
-                resetButton.setDisable(false);
 
                 saveAsButton.setDisable(true);
                 checkContiguousButton.setDisable(true);
@@ -558,7 +586,11 @@ public class Simulator {
 
                 drawSimulation();
                 disableTiles();
-                showUsageTooltips();
+                showUsageTooltips();                
+
+                messageLog.println("[Info] Simulation generated!");
+
+                resetButton.setDisable(false);
             }
         });
     }
@@ -638,6 +670,8 @@ public class Simulator {
         });
     }
 
+    // Updaters for when certain elements need to be enabled or disabled
+    // ========================================================================
     private void updateStepSliderBounds() {
 
         stepSlider.setMin(1);
