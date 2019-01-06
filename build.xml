@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<project name="NetworkSimulator" default="run" basedir=".">
+
+    <!-- Sets variables which can later be used. -->
+    <!-- Access the value of a property using ${var.name}, like in CMake-->
+    <property name="src.dir"    location="src"                             />
+    <property name="jar.dir"    location="jar"                             />
+    <property name="build.dir"  location="bin"                             />
+    <property name="jar.file"   value="${jar.dir}/${ant.project.name}.jar" />
+    <property name="main-class" value="MainApplication"                    />
+
+    <!-- Deletes the existing build directory -->
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+        <delete dir="${jar.dir}"  />
+    </target>
+
+    <!-- Creates the build directory -->
+    <target name="makedir">
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${jar.dir}"  />
+    </target>
+
+    <!-- Compiles the java code -->
+    <target name="compile" depends="clean, makedir">
+        <javac srcdir="${src.dir}" destdir="${build.dir}"/>
+    </target>
+
+    <!-- Jars the java files into a single executable jar -->
+    <target name="jar" depends="compile">
+        <jar destfile="${jar.file}" basedir="${build.dir}">
+            <manifest>
+                <attribute name="Main-Class" value="${main-class}" />
+            </manifest>
+        </jar>
+    </target>
+
+    <!-- Runs the executable jar file -->    
+    <target name="run" depends="jar">
+        <java jar="${jar.dir}/${ant.project.name}.jar" fork="true"/>
+    </target>
+
+</project>
