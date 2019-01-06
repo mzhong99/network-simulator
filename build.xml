@@ -23,7 +23,7 @@
 
     <!-- Compiles the java code -->
     <target name="compile" depends="clean, makedir">
-        <javac srcdir="${src.dir}" destdir="${build.dir}"/>
+        <javac srcdir="${src.dir}" destdir="${build.dir}" target="1.8"/>
     </target>
 
     <!-- Jars the java files into a single executable jar -->
