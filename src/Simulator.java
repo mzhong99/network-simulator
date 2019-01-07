@@ -64,9 +64,9 @@ public class Simulator {
     private boolean recentlyVerified = false;
     private boolean recentlyGeneratedSchedules = false;
 
-    private final int TILE_GAP = 3;
-    private final int TILE_LENGTH = 20;
-    private final int TILE_SPACE = TILE_GAP + TILE_LENGTH;
+    private int TILE_GAP = 3;
+    private int TILE_LENGTH = 20;
+    private int TILE_SPACE = TILE_GAP + TILE_LENGTH;
 
     private void initColors() {
         
@@ -105,6 +105,16 @@ public class Simulator {
     // ========================================================================
     private Node initCenterNode() {
 
+        BorderPane centerRoot = new BorderPane();
+
+        centerRoot.setCenter(initCanvas());
+        centerRoot.setBottom(initZoomer());
+
+        return centerRoot;
+    }
+
+    private Node initCanvas() {
+
         Pane canvasOverlay = new Pane();
 
         for (int r = 0; r < grid.getHeight(); r++) {
@@ -139,6 +149,56 @@ public class Simulator {
         outerPane.setVvalue(0.5);
 
         return outerPane;
+    }
+
+    private Node initZoomer() {
+
+        HBox hbox = new HBox(6);
+        hbox.setPadding(new Insets(6, 6, 6, 6));
+
+        Label zoomAmountHUD = new Label("Zoom: ");
+        Slider zoomSlider = new Slider(5, 100, 1);
+
+        zoomSlider.setBlockIncrement(1);
+        zoomSlider.setMinorTickCount(1);
+        zoomSlider.setMajorTickUnit(96);
+        zoomSlider.setShowTickLabels(true);
+
+        zoomSlider.valueProperty().addListener(new ChangeListener<Number>() {
+
+            @Override
+            public void changed(
+                ObservableValue<? extends Number> observable,
+                Number oldValue,
+                Number newValue) {
+
+                zoomSlider.setValue(Math.round(newValue.doubleValue()));
+            }
+        });
+
+        zoomSlider.valueProperty().addListener(new ChangeListener<Number>() {
+
+            @Override
+            public void changed(
+                ObservableValue<? extends Number> observable,
+                Number oldValue,
+                Number newValue) {
+
+                int oldZoom = (int)Math.round(oldValue.doubleValue());
+                int newZoom = (int)Math.round(newValue.doubleValue());
+
+                if (oldZoom != newZoom) {
+
+                    TILE_LENGTH = newZoom;
+                    TILE_SPACE = TILE_LENGTH + TILE_GAP;
+
+                    updateZoom();
+                }
+            }
+        });
+
+        hbox.getChildren().addAll(zoomAmountHUD, zoomSlider);
+        return hbox;
     }
 
     private void initTileEventHandler(int row, int col, Rectangle current) {
@@ -692,6 +752,22 @@ public class Simulator {
         prevPhaseButton.setDisable(!locationData.canDecreasePeriod());
     }
 
+    private void updateZoom() {
+
+        for (int r = 0; r < grid.getHeight(); r++) {
+            for (int c = 0; c < grid.getWidth(); c++) {
+
+                Rectangle current = grid.getRectangleAt(r, c);
+
+                current.setX(c * TILE_SPACE);
+                current.setY(r * TILE_SPACE);
+
+                current.setWidth(TILE_LENGTH);
+                current.setHeight(TILE_LENGTH);
+            }
+        }
+    }
+
     private boolean canSimulate() { 
 
         return recentlyVerified && recentlyGeneratedSchedules;
@@ -755,13 +831,16 @@ public class Simulator {
 
         for (Tile validTile : grid.getValidTiles()) {
             
-            Color update = locationData.getIntensityAt(period, step, validTile);
-            
-            int row = validTile.getRow();
-            int col = validTile.getCol();
+            if ("floor".equals(validTile.getAttribute())) {
 
-            Rectangle rectangle = grid.getRectangleAt(row, col);
-            rectangle.setFill(update);
+                Color update = locationData.getIntensityAt(period, step, validTile);
+                
+                int row = validTile.getRow();
+                int col = validTile.getCol();
+
+                Rectangle rectangle = grid.getRectangleAt(row, col);
+                rectangle.setFill(update);
+            }
         }
     }
 
