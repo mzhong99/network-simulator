@@ -34,14 +34,10 @@ public class LocationData {
         this.period = 0;
         this.lastTransitionPeriod = schedules.get(0).size() - 1;
 
-        this.maxUsage = 0;
-
-        this.step = 0;
-        this.maxStepsAllPeriods = new int[lastTransitionPeriod];
-        Arrays.fill(maxStepsAllPeriods, 0);
-
         initPaths();
-        initTileUsage();
+        generateTileUsage();
+        padPaths();
+        generateTileUsage();
     }
 
     private void initPaths() {
@@ -54,10 +50,36 @@ public class LocationData {
         }
     }
 
-    private void initTileUsage() {
+    private void padPaths() {
+
+        for (List<List<Tile>> pathsOneActor : pathsAllActors) {
+            for (int p = 0; p < pathsOneActor.size(); p++) {
+
+                List<Tile> path = pathsOneActor.get(p);
+
+                for (int n = path.size() - 1; n >= 0; n--) {
+
+                    Tile currentTile = path.get(n);
+                    double scaleFactor = getScaleFactorAt(p, n, currentTile);
+
+                    if (scaleFactor > 0.7) {
+                        path.add(n--, currentTile);
+                    }
+                }
+            }
+        }
+    }
+
+    private void generateTileUsage() {
         
         tileUsage = new ArrayList<List<Map<Tile, Integer>>>();
+
+        maxUsage = 0;
+        step = 0;
         
+        maxStepsAllPeriods = new int[lastTransitionPeriod];
+        Arrays.fill(maxStepsAllPeriods, 0);
+
         for (int p = 0; p < lastTransitionPeriod; p++) {
             tileUsage.add(new ArrayList<Map<Tile, Integer>>());
         }
@@ -157,12 +179,19 @@ public class LocationData {
         return tileUsage.get(period).get(step).get(tile);
     }
 
-    public Color getIntensityAt(int period, int step, Tile tile) {
-        
+    private double getScaleFactorAt(int period, int step, Tile tile) {
+
         int usage = getUsageAt(period, step, tile);
 
         double scaleFactor = ((double) usage) / ((double) maxUsage);
         scaleFactor = (0.7 * Math.sqrt(Math.sqrt(scaleFactor))) + 0.3;
+
+        return scaleFactor;
+    }
+
+    public Color getIntensityAt(int period, int step, Tile tile) {
+        
+        double scaleFactor = getScaleFactorAt(period, step, tile);
 
         float red = (float) Math.max(0.0, -1.0 + (2.0 * scaleFactor));
         float green = (float) Math.min(1.0, 2.0 - (2.0 * scaleFactor));

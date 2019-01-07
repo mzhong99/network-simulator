@@ -49,6 +49,7 @@ public class Simulator {
     private Button saveAsButton;
     private Button checkContiguousButton;
     private Button generateSchedulesButton;
+    private Button setTimeParametersButton;
 
     private Button simulateButton;
     private Button resetButton;
@@ -60,13 +61,20 @@ public class Simulator {
     private Button prevPhaseButton;
 
     private Slider stepSlider;
+    private Label timeLabel;
 
     private boolean recentlyVerified = false;
     private boolean recentlyGeneratedSchedules = false;
 
-    private int TILE_GAP = 3;
+    private int TILE_GAP = 1;
     private int TILE_LENGTH = 20;
     private int TILE_SPACE = TILE_GAP + TILE_LENGTH;
+
+    private String DISTANCE_UNIT = "";
+    private String TIME_UNIT = "";
+
+    private int ACTOR_TRAVERSAL_FREQUENCY = -1;
+    private int TILE_SCALE = -1;
 
     private void initColors() {
         
@@ -162,6 +170,7 @@ public class Simulator {
         zoomSlider.setBlockIncrement(1);
         zoomSlider.setMinorTickCount(1);
         zoomSlider.setMajorTickUnit(96);
+        zoomSlider.setValue(20);
         zoomSlider.setShowTickLabels(true);
 
         zoomSlider.valueProperty().addListener(new ChangeListener<Number>() {
@@ -190,6 +199,7 @@ public class Simulator {
                 if (oldZoom != newZoom) {
 
                     TILE_LENGTH = newZoom;
+                    TILE_GAP = 1 + (newZoom / 34);
                     TILE_SPACE = TILE_LENGTH + TILE_GAP;
 
                     updateZoom();
@@ -197,7 +207,17 @@ public class Simulator {
             }
         });
 
-        hbox.getChildren().addAll(zoomAmountHUD, zoomSlider);
+        Button zoomButton = new Button("Reset Zoom");
+        zoomButton.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent event) {
+                zoomSlider.setValue(20);
+                updateZoom();
+            }
+        });
+
+        hbox.getChildren().addAll(zoomAmountHUD, zoomSlider, zoomButton);
         return hbox;
     }
 
@@ -295,11 +315,13 @@ public class Simulator {
         initSaveAsButton();
         initCheckContiguousButton();
         initGenerateSchedulesButton();
+        initSetTimeParametersButton();
 
         vbox.getChildren().addAll(
             saveAsButton, 
             checkContiguousButton, 
-            generateSchedulesButton
+            generateSchedulesButton,
+            setTimeParametersButton
         );
 
         return vbox;
@@ -435,6 +457,122 @@ public class Simulator {
         generateSchedulesButton.setMaxWidth(Double.MAX_VALUE);
     }
 
+    private void initSetTimeParametersButton() {
+
+        setTimeParametersButton = new Button("Set Time Parameters...");
+        setTimeParametersButton.setOnAction(new EventHandler<ActionEvent>() {
+
+            @Override
+            public void handle(ActionEvent event) {
+                
+                Stage promptStage = new Stage();
+                promptStage.setTitle("Set Time Parameters...");
+                
+                TextField distanceUnitField = new TextField();
+                distanceUnitField.setText(DISTANCE_UNIT);
+                distanceUnitField.setPromptText("Enter distance unit");
+                distanceUnitField.setMaxWidth(Double.MAX_VALUE);
+
+                TextField timeUnitField = new TextField();
+                timeUnitField.setText(TIME_UNIT);
+                timeUnitField.setPromptText("Enter time unit");
+                timeUnitField.setMaxWidth(Double.MAX_VALUE);
+
+                TextField actorFrequencyField = new TextField();
+                actorFrequencyField.setText(
+                    ACTOR_TRAVERSAL_FREQUENCY > 0 
+                        ? String.valueOf(ACTOR_TRAVERSAL_FREQUENCY)
+                        : ""
+                );
+                actorFrequencyField.setPromptText("Enter movement frequency");
+                actorFrequencyField.setMaxWidth(Double.MAX_VALUE);
+
+                TextField tileScaleField = new TextField();
+                tileScaleField.setText(
+                    TILE_SCALE > 0
+                        ? String.valueOf(TILE_SCALE)
+                        : ""
+                );
+                tileScaleField.setPromptText("Enter tile scale");
+                tileScaleField.setMaxWidth(Double.MAX_VALUE);
+
+                Button updateButton = new Button("Update all parementers and return");
+                updateButton.setOnAction(new EventHandler<ActionEvent>() {
+
+                    @Override
+                    public void handle(ActionEvent event) {
+                        
+                        try {
+                            
+                            String tempDistanceText = distanceUnitField.getText();
+                            String tempTimeUnitText = timeUnitField.getText();
+                            
+                            String actorFrequencyText = actorFrequencyField.getText();
+                            String tileScaleText = tileScaleField.getText();
+
+                            if ("".equals(tempDistanceText) || "".equals(tempTimeUnitText)) {
+                                throw new Exception("Distance and time units cannot be empty.");
+                            }
+
+                            int tempActorFrequency = Integer.parseInt(actorFrequencyText);
+                            int tempTileScale = Integer.parseInt(tileScaleText);
+
+                            if (tempActorFrequency <= 0 || tempTileScale <= 0) {
+                                throw new Exception("Speed and Tile Scale must be positive integers.");
+                            }
+
+                            ACTOR_TRAVERSAL_FREQUENCY = tempActorFrequency;
+                            TILE_SCALE = tempTileScale;
+                            
+                            DISTANCE_UNIT = tempDistanceText;
+                            TIME_UNIT = tempTimeUnitText;
+
+                            simulateButton.setDisable(!canSimulate());
+
+                            messageLog.println("[Info] Time parameters set. Values:");
+                            messageLog.println("[Info] Distance Unit: " + DISTANCE_UNIT);
+                            messageLog.println("[Info] Time Unit: " + TIME_UNIT);
+                            
+                            messageLog.println(
+                                "[Info] Actor Frequency: " 
+                                + ACTOR_TRAVERSAL_FREQUENCY + " " + TIME_UNIT 
+                                + " per " + TILE_SCALE + " " + DISTANCE_UNIT
+                            );
+                            
+                            messageLog.println("[Info] Tile Scale: " + TILE_SCALE + " " + DISTANCE_UNIT);
+                        }
+                        catch (Exception ex) {
+                            messageLog.println(
+                                "[Error] Invalid time parameters were set. Parameters not updated."
+                            );
+                        }
+
+                        promptStage.hide();
+                    }
+                });
+
+                VBox rootPane = new VBox(6);
+                rootPane.getChildren().addAll(
+                    distanceUnitField,
+                    timeUnitField,
+                    tileScaleField,
+                    actorFrequencyField,
+                    updateButton
+                );
+
+                rootPane.setPadding(new Insets(12, 12, 12, 12));
+
+                StackPane wrapper = new StackPane();
+                wrapper.getChildren().addAll(rootPane);
+                promptStage.setScene(new Scene(wrapper));
+
+                promptStage.showAndWait();
+            }
+        });
+
+        setTimeParametersButton.setMaxWidth(Double.MAX_VALUE);
+    }
+
     // Initializers for bottom node of UI
     // ========================================================================
     private Node initBottomNode() {
@@ -456,7 +594,8 @@ public class Simulator {
         VBox vbox = new VBox(6);
         vbox.setPadding(new Insets(12, 12, 12, 6));
 
-        Text outputLabel = new Text("Schedules");
+        Label outputLabel = new Label("Schedules");
+        timeLabel = new Label("Time: ");
 
         scheduleBaseOutput = new ListView<String>();
         scheduleBaseOutput.setPrefWidth(300);
@@ -482,6 +621,7 @@ public class Simulator {
             simulateButton,
             resetButton,
             simulationControls,
+            timeLabel,
             stepSlider
         );
 
@@ -580,6 +720,7 @@ public class Simulator {
                 saveAsButton.setDisable(false);
                 checkContiguousButton.setDisable(false);
                 generateSchedulesButton.setDisable(false);
+                setTimeParametersButton.setDisable(true);
 
                 simulateButton.setDisable(true);
                 resetButton.setDisable(true);
@@ -635,6 +776,7 @@ public class Simulator {
                 saveAsButton.setDisable(true);
                 checkContiguousButton.setDisable(true);
                 generateSchedulesButton.setDisable(true);
+                setTimeParametersButton.setDisable(true);
 
                 locationData = new LocationData(
                     scheduleGenerator, 
@@ -692,7 +834,6 @@ public class Simulator {
     private void initStepSlider() {
         
         stepSlider = new Slider(0, 1, 1);
-        stepSlider.setBlockIncrement(1);
         stepSlider.setMajorTickUnit(1);
         stepSlider.setMinorTickCount(1);
         stepSlider.setShowTickLabels(true);
@@ -705,7 +846,10 @@ public class Simulator {
                 Number oldValue,
                 Number newValue) {
 
-                stepSlider.setValue(Math.round(newValue.doubleValue()));
+                int newValueRaw = (int)Math.round(newValue.doubleValue());
+                int newValueDiv = newValueRaw - (newValueRaw % ACTOR_TRAVERSAL_FREQUENCY);
+
+                stepSlider.setValue(newValueDiv);
             }
         });
 
@@ -717,14 +861,21 @@ public class Simulator {
                 Number oldValue,
                 Number newValue) {
 
-                int oldStep = (int)Math.round(oldValue.doubleValue());
-                int newStep = (int)Math.round(newValue.doubleValue());
+                int oldStepRaw = (int)Math.round(oldValue.doubleValue());
+                int oldStepDiv = oldStepRaw - (oldStepRaw % ACTOR_TRAVERSAL_FREQUENCY);
+
+                int newStepRaw = (int)Math.round(newValue.doubleValue());
+                int newStepDiv = newStepRaw - (newStepRaw % ACTOR_TRAVERSAL_FREQUENCY);
+
+                int oldStep = oldStepDiv / ACTOR_TRAVERSAL_FREQUENCY;
+                int newStep = newStepDiv / ACTOR_TRAVERSAL_FREQUENCY;
 
                 if (oldStep != newStep) {
                     
-                    int step = newStep - 1;
+                    int step = newStep;
                     locationData.setStep(step);
 
+                    timeLabel.setText("Time: " + newStepDiv + " " + TIME_UNIT);
                     updateCanUseRightButtons();
                     drawSimulation();
                     showUsageTooltips();
@@ -737,10 +888,11 @@ public class Simulator {
     // ========================================================================
     private void updateStepSliderBounds() {
 
-        stepSlider.setMin(1);
-        stepSlider.setMax(locationData.getMaxStep() + 1);
-        stepSlider.setValue(locationData.getStep() + 1);
-        stepSlider.setMajorTickUnit(locationData.getMaxStep());
+        stepSlider.setMin(0);
+        stepSlider.setMax((locationData.getMaxStep()) * ACTOR_TRAVERSAL_FREQUENCY);
+        stepSlider.setValue((locationData.getStep()) * ACTOR_TRAVERSAL_FREQUENCY);
+        stepSlider.setMajorTickUnit(locationData.getMaxStep() * ACTOR_TRAVERSAL_FREQUENCY);
+        stepSlider.setBlockIncrement(ACTOR_TRAVERSAL_FREQUENCY);
     }
 
     private void updateCanUseRightButtons() {
@@ -770,7 +922,12 @@ public class Simulator {
 
     private boolean canSimulate() { 
 
-        return recentlyVerified && recentlyGeneratedSchedules;
+        return recentlyVerified 
+            && recentlyGeneratedSchedules
+            && ACTOR_TRAVERSAL_FREQUENCY > 0
+            && TILE_SCALE > 0
+            && !("".equals(DISTANCE_UNIT))
+            && !("".equals(TIME_UNIT));
     }
 
     private void disableTiles() {
@@ -863,7 +1020,7 @@ public class Simulator {
             }
         }
 
-        this.messageLog = new MessageLog(6);
+        this.messageLog = new MessageLog(10);
 
         initStage();
     }
