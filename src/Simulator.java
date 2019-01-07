@@ -147,18 +147,21 @@ public class Simulator {
 
             @Override
             public void handle(MouseEvent event) {
-                
-                recentlyVerified = false;
-                recentlyGeneratedSchedules = false;
-                
-                simulateButton.setDisable(true);
 
-                String oldAttribute = grid.getAttributeAt(row, col);
-                String newAttribute = tilePaintbrush;
+                if (event.isPrimaryButtonDown()) {
                 
-                boolean oldIsNew = oldAttribute.equals(newAttribute);
+                    recentlyVerified = false;
+                    recentlyGeneratedSchedules = false;
+                    
+                    simulateButton.setDisable(true);
 
-                this.setTile(oldIsNew ? "wall" : tilePaintbrush);
+                    String oldAttribute = grid.getAttributeAt(row, col);
+                    String newAttribute = tilePaintbrush;
+                    
+                    boolean oldIsNew = oldAttribute.equals(newAttribute);
+
+                    this.setTile(oldIsNew ? "wall" : tilePaintbrush);
+                }
             }
 
             public void setTile(String brush) {
