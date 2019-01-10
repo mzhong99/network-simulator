@@ -62,7 +62,7 @@ public class LocationData {
                     Tile currentTile = path.get(n);
                     double scaleFactor = getScaleFactorAt(p, n, currentTile);
 
-                    if (scaleFactor > 0.7) {
+                    if (scaleFactor > 0.8) {
                         path.add(n--, currentTile);
                     }
                 }
