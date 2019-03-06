@@ -201,6 +201,7 @@ public class Simulator {
         private Button checkContiguousButton;
         private Button generateSchedulesButton;
         private Button setTimeParametersButton;
+        private Button reshapeButton;
 
         public LeftBase() {
             
@@ -218,12 +219,14 @@ public class Simulator {
             initCheckContiguousButton();
             initGenerateSchedulesButton();
             initSetTimeParametersButton();
+            initReshapeButton();
 
             leftRoot.getChildren().addAll(
                 saveAsButton, 
                 checkContiguousButton, 
                 generateSchedulesButton,
-                setTimeParametersButton
+                setTimeParametersButton,
+                reshapeButton
             );
         }
 
@@ -367,17 +370,30 @@ public class Simulator {
                 public void handle(ActionEvent event) {
                     
                     Stage promptStage = new Stage();
+                    promptStage.setResizable(false);
                     promptStage.setTitle("Set Time Parameters...");
                     
                     TextField distanceUnitField = new TextField();
                     distanceUnitField.setText(DISTANCE_UNIT);
                     distanceUnitField.setPromptText("Enter distance unit");
                     distanceUnitField.setMaxWidth(Double.MAX_VALUE);
+                    distanceUnitField.setTooltip(
+                        new Tooltip(
+                            "The distance unit length of one tile in this simulation."
+                          + "\nEx: [Feet, Meters]"
+                        )
+                    );
+
 
                     TextField timeUnitField = new TextField();
                     timeUnitField.setText(TIME_UNIT);
                     timeUnitField.setPromptText("Enter time unit");
                     timeUnitField.setMaxWidth(Double.MAX_VALUE);
+                    timeUnitField.setTooltip(
+                        new Tooltip("The time unit elapsed when the simulation is incremented one step."
+                                  + "\nEx: [Seconds, Milliseconds]"
+                        )
+                    );
 
                     TextField actorFrequencyField = new TextField();
                     actorFrequencyField.setText(
@@ -385,8 +401,13 @@ public class Simulator {
                             ? String.valueOf(ACTOR_TRAVERSAL_FREQUENCY)
                             : ""
                     );
-                    actorFrequencyField.setPromptText("Enter movement frequency");
+                    actorFrequencyField.setPromptText("Enter movement speed");
                     actorFrequencyField.setMaxWidth(Double.MAX_VALUE);
+                    actorFrequencyField.setTooltip(
+                        new Tooltip(
+                            "The amount of time (measured in the [time unit]) it takes for one actor to pass a tile."
+                        )
+                    );
 
                     TextField tileScaleField = new TextField();
                     tileScaleField.setText(
@@ -396,6 +417,12 @@ public class Simulator {
                     );
                     tileScaleField.setPromptText("Enter tile scale");
                     tileScaleField.setMaxWidth(Double.MAX_VALUE);
+                    tileScaleField.setTooltip(
+                        new Tooltip(
+                            "How long a tile is (measured in thr [distance unit])"
+                        )
+                    );
+
 
                     Button updateButton = new Button("Update all parementers and return");
                     updateButton.setOnAction(new EventHandler<ActionEvent>() {
@@ -451,13 +478,22 @@ public class Simulator {
                             promptStage.hide();
                         }
                     });
+                    updateButton.setMaxWidth(Double.MAX_VALUE);
 
                     VBox rootPane = new VBox(6);
+                    GridPane tempGridPane = new GridPane();
+
+                    tempGridPane.setHgap(6);
+                    tempGridPane.setVgap(6);
+
+                    tempGridPane.add(distanceUnitField, 0, 0);
+                    tempGridPane.add(timeUnitField, 0, 1);
+                    tempGridPane.add(tileScaleField, 1, 0);
+                    tempGridPane.add(actorFrequencyField, 1, 1);
+
                     rootPane.getChildren().addAll(
-                        distanceUnitField,
-                        timeUnitField,
-                        tileScaleField,
-                        actorFrequencyField,
+                        new Text("Enter parameters for actor movement scaling:"),
+                        tempGridPane,
                         updateButton
                     );
 
@@ -472,6 +508,117 @@ public class Simulator {
             });
 
             setTimeParametersButton.setMaxWidth(Double.MAX_VALUE);
+        }
+
+        private void initReshapeButton() {
+            reshapeButton = new Button("Reshape Grid...");
+            reshapeButton.setMaxWidth(Double.MAX_VALUE);
+            reshapeButton.setOnAction(new EventHandler<ActionEvent>() {
+
+                @Override
+                public void handle(ActionEvent event) {
+                    Stage promptStage = new Stage();
+                    promptStage.setResizable(false);
+                    promptStage.setTitle("Resize grid");
+
+                    Text promptText = new Text("Update the size of the grid used in this simulation.");
+
+                    TextField relativeStartingXField = new TextField();
+                    relativeStartingXField.setTooltip(
+                        new Tooltip("Enter the left-most position the new grid will receive.")
+                    );
+                    relativeStartingXField.setText("0");
+
+                    TextField relativeStartingYField = new TextField();
+                    relativeStartingYField.setTooltip(
+                        new Tooltip("Enter the top-most position the new grid will receive.")
+                    );
+                    relativeStartingYField.setText("0");
+
+                    TextField updatedWidthField = new TextField();
+                    updatedWidthField.setTooltip(new Tooltip("Enter a positive integer as the new width."));
+                    updatedWidthField.setText(String.valueOf(grid.getWidth()));
+
+                    TextField updatedHeightField = new TextField();
+                    updatedHeightField.setTooltip(new Tooltip("Enter a positive integer as the new height."));
+                    updatedHeightField.setText(String.valueOf(grid.getHeight()));
+
+                    GridPane gridPane = new GridPane();
+                    gridPane.setHgap(6);
+                    gridPane.setVgap(6);
+
+                    gridPane.add(new Text("Relative Starting X Position"), 0, 0);
+                    gridPane.add(new Text("Relative Starting Y Position"), 0, 1);
+                    gridPane.add(new Text("Updated Width"), 0, 2);
+                    gridPane.add(new Text("Updated Height"), 0, 3);
+
+                    gridPane.add(relativeStartingXField, 1, 0);
+                    gridPane.add(relativeStartingYField, 1, 1);
+                    gridPane.add(updatedWidthField, 1, 2);
+                    gridPane.add(updatedHeightField, 1, 3);
+
+                    Button updateButton = new Button("Update grid size and return");
+                    updateButton.setOnAction(new EventHandler<ActionEvent>() {
+
+                        @Override
+                        public void handle(ActionEvent event) {
+                            try {
+                                int newStartingX = Integer.parseInt(relativeStartingXField.getText());
+                                int newStartingY = Integer.parseInt(relativeStartingYField.getText());
+
+                                int newWidth = Integer.parseInt(updatedWidthField.getText());
+                                int newHeight = Integer.parseInt(updatedHeightField.getText());
+
+                                if (newWidth <= 0 || newHeight <= 0) {
+                                    throw new IllegalArgumentException("Paramaeter out of bounds");
+                                }
+
+                                Grid updatedGrid = new Grid(newWidth, newHeight);
+                                for (int newX = 0, oldX = newStartingX; newX < newWidth; newX++, oldX++) {
+                                    for (int newY = 0, oldY = newStartingY; newY < newHeight; newY++, oldY++) {
+                                        if (oldX < 0 || oldY < 0) {
+                                            continue;
+                                        }
+                                        else {
+                                            updatedGrid.setAttributeAt(newX, newY, grid.getAttributeAt(oldX, oldY));
+                                        }
+                                    }
+                                }
+
+                                grid = updatedGrid;
+                                centerBase = new CenterBase();
+                                mainPane.setCenter(centerBase.centerRoot);
+
+                                messageLog.println("[Info] Grid reshaping to the following dimensions:");
+                                messageLog.println("[Info] Relative starting X position: " + newStartingX);
+                                messageLog.println("[Info] Relative starting Y position: " + newStartingY);
+                                messageLog.println("[Info] Updated Width: " + newWidth);
+                                messageLog.println("[Info] Updated Height: " + newHeight);
+                            }
+                            catch (NumberFormatException exception) {
+                                messageLog.println("[Error] Grid reshaping blocked due to bad parameters");
+                            }
+                            catch (IllegalArgumentException exception) {
+                                messageLog.println("[Error] Grid reshaping blocked.");
+                                messageLog.println("[Error] Relative X and Y positions must be zero or greater");
+                                messageLog.println("[Error] Width and Height must be greater than zero");
+                            }
+                            promptStage.close();
+                        }
+                    });
+
+                    updateButton.setMaxWidth(Double.MAX_VALUE);
+
+                    VBox promptVBox = new VBox(6);
+                    promptVBox.getChildren().addAll(promptText, gridPane, updateButton);
+                    StackPane stackPane = new StackPane();
+                    stackPane.getChildren().addAll(promptVBox);
+                    stackPane.setPadding(new Insets(12, 12, 12, 12));
+
+                    promptStage.setScene(new Scene(stackPane));
+                    promptStage.showAndWait();
+                }
+            });
         }
     }
 
@@ -668,6 +815,7 @@ public class Simulator {
                     leftBase.checkContiguousButton.setDisable(false);
                     leftBase.generateSchedulesButton.setDisable(false);
                     leftBase.setTimeParametersButton.setDisable(false);
+                    leftBase.reshapeButton.setDisable(false);
 
                     simulateButton.setDisable(true);
                     resetButton.setDisable(true);
@@ -724,6 +872,7 @@ public class Simulator {
                     leftBase.checkContiguousButton.setDisable(true);
                     leftBase.generateSchedulesButton.setDisable(true);
                     leftBase.setTimeParametersButton.setDisable(true);
+                    leftBase.reshapeButton.setDisable(true);
 
                     locationData = new LocationData(
                         scheduleGenerator, 
@@ -862,6 +1011,7 @@ public class Simulator {
     private Grid grid;
 
     private Stage actorStage;
+    private BorderPane mainPane;
 
     private ScheduleGenerator scheduleGenerator;
     private LocationData locationData;
@@ -901,7 +1051,7 @@ public class Simulator {
         actorStage.setTitle(simulationName);
 
         StackPane rootPane = new StackPane();
-        BorderPane mainPane = new BorderPane();
+        mainPane = new BorderPane();
         rootPane.getChildren().addAll(mainPane);
         
         mainPane.setCenter(centerBase.centerRoot);
@@ -1027,7 +1177,10 @@ public class Simulator {
         }
     }
 
-    public Simulator(int width, int height, String simulationName, String[][] attributes) {
+    public Simulator(int width,
+                     int height,
+                     String simulationName,
+                     String[][] attributes) {
 
         initColors();
 

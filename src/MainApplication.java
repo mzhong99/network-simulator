@@ -27,12 +27,16 @@ public class MainApplication extends Application {
         Application.launch(args);
     }
 
+    Stage loaderStage;
     Button createNewButton = new Button("Create New");
     Button loadButton = new Button("Load from File");
 
     @Override
     public void start(Stage primaryStage) {
-        
+
+        loaderStage = primaryStage;
+        loaderStage.setResizable(false);
+
         primaryStage.setTitle("Network Simulator");
         
         initButtonBehavior();
@@ -254,17 +258,19 @@ public class MainApplication extends Application {
         promptStage.show();
     }
 
-    public void loadCachedSimulation(
-        int width, 
-        int height, 
-        String simulationName, 
-        String[][] attributes) {
+    public void loadCachedSimulation(int width,
+                                     int height,
+                                     String simulationName,
+                                     String[][] attributes) {
 
         Simulator simulator = new Simulator(width, height, simulationName, attributes);
         simulator.show();
+        loaderStage.hide();
     }
 
-    public void startNewSimulation(int width, int height, String simulationName) {
+    public void startNewSimulation(int width,
+                                   int height,
+                                   String simulationName) {
 
         String[][] attributes = new String[height][width];
         for (String[] row : attributes) {
