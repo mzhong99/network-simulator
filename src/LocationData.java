@@ -6,12 +6,12 @@ public class LocationData {
     private ScheduleGenerator generator;
     private List<List<Tile>> schedules;
     private Grid grid;
-    
+
     // 1st idx : a'th actor
     // 2nd idx : p'th period
     // 3rd idx : n'th step
     private List<List<List<Tile>>> pathsAllActors;
-    
+
     // 1st idx : p'th period
     // 2nd idx : n'th step
     // 3rd key : k'th tile
@@ -19,14 +19,14 @@ public class LocationData {
 
     private int period;
     private int lastTransitionPeriod;
-    
+
     private int maxUsage;
-    
+
     private int step;
     private int[] maxStepsAllPeriods;
 
     public LocationData(ScheduleGenerator generator, List<List<Tile>> schedules, Grid grid) {
-        
+
         this.generator = generator;
         this.schedules = schedules;
         this.grid = grid;
@@ -41,7 +41,7 @@ public class LocationData {
     }
 
     private void initPaths() {
-        
+
         pathsAllActors = new ArrayList<List<List<Tile>>>();
 
         for (List<Tile> schedule : schedules) {
@@ -71,12 +71,12 @@ public class LocationData {
     }
 
     private void generateTileUsage() {
-        
+
         tileUsage = new ArrayList<List<Map<Tile, Integer>>>();
 
         maxUsage = 0;
         step = 0;
-        
+
         maxStepsAllPeriods = new int[lastTransitionPeriod];
         Arrays.fill(maxStepsAllPeriods, 0);
 
@@ -85,20 +85,20 @@ public class LocationData {
         }
 
         for (List<List<Tile>> pathsOneActorAllPeriods : pathsAllActors) {
-            
+
             for (int p = 0; p < lastTransitionPeriod; p++) {
-                
+
                 List<Map<Tile, Integer>> usageOnePeriodAllSteps = tileUsage.get(p);
                 List<Tile> pathOneActorOnePeriod = pathsOneActorAllPeriods.get(p);
-                
+
                 int numSteps = pathOneActorOnePeriod.size();
                 maxStepsAllPeriods[p] = Math.max(maxStepsAllPeriods[p], numSteps);
 
                 // pad out to number of steps (compute if absent)
                 while (usageOnePeriodAllSteps.size() < numSteps) {
-                    
+
                     Map<Tile, Integer> usageOnePeriodOneStep = new HashMap<Tile, Integer>();
-                    
+
                     for (Tile validTile : grid.getValidTiles()) {
                         usageOnePeriodOneStep.put(validTile, 0);
                     }
@@ -111,7 +111,7 @@ public class LocationData {
                     Map<Tile, Integer> usageOnePeriodOneStep = usageOnePeriodAllSteps.get(n);
 
                     Tile currentTile = pathOneActorOnePeriod.get(n);
-                    
+
                     int oldUsage = usageOnePeriodOneStep.get(currentTile);
                     int newUsage = oldUsage + 1;
 
@@ -121,7 +121,26 @@ public class LocationData {
             }
         }
     }
-    
+
+    public List<List<Integer>> getTotalUsageAt(Tile tile) {
+
+        List<List<Integer>> usageOneTileAllPeriods = new ArrayList<List<Integer>>();
+
+        for (int p = 0; p < lastTransitionPeriod; p++) {
+
+            List<Integer> usageOneTileOnePeriod = new ArrayList<Integer>();
+
+            for (int s = 0; s < maxStepsAllPeriods[p]; s++) {
+                int usageOneTileOnePeriodOneStep = getUsageAt(p, s, tile);
+                usageOneTileOnePeriod.add(usageOneTileOnePeriodOneStep);
+            }
+
+            usageOneTileAllPeriods.add(usageOneTileOnePeriod);
+        }
+
+        return usageOneTileAllPeriods;
+    }
+
     public int getPeriod() { return period; }
 
     public boolean increasePeriod() {
@@ -190,7 +209,7 @@ public class LocationData {
     }
 
     public Color getIntensityAt(int period, int step, Tile tile) {
-        
+
         double scaleFactor = getScaleFactorAt(period, step, tile);
 
         float red = (float) Math.max(0.0, -1.0 + (2.0 * scaleFactor));

@@ -8,6 +8,7 @@ import javafx.scene.control.*;
 import javafx.scene.canvas.*;
 import javafx.scene.layout.*;
 import javafx.scene.shape.*;
+import javafx.scene.chart.*;
 import javafx.scene.input.*;
 import javafx.scene.text.*;
 
@@ -874,11 +875,7 @@ public class Simulator {
                     leftBase.setTimeParametersButton.setDisable(true);
                     leftBase.reshapeButton.setDisable(true);
 
-                    locationData = new LocationData(
-                        scheduleGenerator, 
-                        actorSchedules, 
-                        grid
-                    );
+                    locationData = new LocationData(scheduleGenerator, actorSchedules, grid);
 
                     updateCanUseRightButtons();
                     updateStepSliderBounds();
@@ -1127,17 +1124,47 @@ public class Simulator {
         for (int r = 0; r < grid.getHeight(); r++) {
             
             for (int c = 0; c < grid.getWidth(); c++) {
-                
                 Rectangle current = grid.getRectangleAt(r, c);
-                
-                current.setOnMousePressed(null);
-                
+
                 int period = locationData.getPeriod();
                 int step = locationData.getStep();
                 Tile tile = grid.getTileAt(r, c);
 
-                Tooltip usageTooltip = grid.getTooltipAt(r, c);
-                usageTooltip.setText("Usage: 0");
+                current.setOnMousePressed(new EventHandler<MouseEvent>() {
+                    @Override
+                    public void handle(MouseEvent event) {
+                        Stage statisticsStage = new Stage();
+                        statisticsStage.setTitle("Statistics for (" + tile.getRow() + ", " + tile.getCol() + ")");
+
+                        NumberAxis xAxis = new NumberAxis();
+                        NumberAxis yAxis = new NumberAxis();
+
+                        LineChart<Number, Number> lineChart = new LineChart<Number, Number>(xAxis, yAxis);
+
+                        xAxis.setLabel("Time Elapsed [" + TIME_UNIT + "]");
+                        yAxis.setLabel("Usage [# actors]");
+
+                        List<List<Integer>> usageAllPeriods = locationData.getTotalUsageAt(tile);
+                        for (int period = 0; period < usageAllPeriods.size(); period++) {
+
+                            XYChart.Series series = new XYChart.Series();
+                            series.setName("Period " + (period + 1));
+
+                            List<Integer> usageOnePeriod = usageAllPeriods.get(period);
+                            for (int step = 0; step < usageOnePeriod.size(); step++) {
+                                int usageOneStep = usageOnePeriod.get(step);
+                                XYChart.Data point = new XYChart.Data(step * ACTOR_TRAVERSAL_FREQUENCY, usageOneStep);
+                                series.getData().add(point);
+                            }
+
+                            lineChart.getData().add(series);
+                        }
+
+                        statisticsStage.setScene(new Scene(lineChart));
+                        statisticsStage.showAndWait();
+                    }
+                });
+                
             }
         }
     }
@@ -1153,7 +1180,9 @@ public class Simulator {
             int step = locationData.getStep();
 
             Tooltip usageTooltip = grid.getTooltipAt(row, col);
-            usageTooltip.setText("Usage: " + locationData.getUsageAt(period, step, validTile));
+            usageTooltip.setText(
+                "Usage at (" + row + ", " + col + "): " + locationData.getUsageAt(period, step, validTile)
+            );
         }
     }
 
